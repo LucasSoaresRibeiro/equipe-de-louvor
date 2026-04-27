@@ -143,10 +143,27 @@ function parseScheduleSongs(schedule) {
         }));
 }
 
+function parseEventDateValue(isoOrStr) {
+    if (!isoOrStr) return null;
+    const raw = String(isoOrStr).trim();
+    if (!raw) return null;
+
+    const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (dateOnly) {
+        const year = Number(dateOnly[1]);
+        const monthIndex = Number(dateOnly[2]) - 1;
+        const day = Number(dateOnly[3]);
+        return new Date(year, monthIndex, day);
+    }
+
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
 function formatEventDateForUi(isoOrStr) {
     if (!isoOrStr) return '';
-    const d = new Date(isoOrStr);
-    if (Number.isNaN(d.getTime())) return String(isoOrStr);
+    const d = parseEventDateValue(isoOrStr);
+    if (!d) return String(isoOrStr);
     const day = String(d.getDate()).padStart(2, '0');
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();

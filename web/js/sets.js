@@ -104,8 +104,10 @@ async function loadAllSets() {
         setList.sort((a, b) => {
             const isoA = a.data.eventDateIso || '';
             const isoB = b.data.eventDateIso || '';
-            const tA = isoA ? new Date(isoA).getTime() : 0;
-            const tB = isoB ? new Date(isoB).getTime() : 0;
+            const dA = isoA ? parseEventDateValue(isoA) : null;
+            const dB = isoB ? parseEventDateValue(isoB) : null;
+            const tA = dA ? dA.getTime() : 0;
+            const tB = dB ? dB.getTime() : 0;
             return tB - tA;
         });
 
@@ -115,8 +117,8 @@ async function loadAllSets() {
         const isTodayOrFuture = (set) => {
             const iso = set && set.data ? set.data.eventDateIso : '';
             if (!iso) return false;
-            const d = new Date(iso);
-            if (Number.isNaN(d.getTime())) return false;
+            const d = parseEventDateValue(iso);
+            if (!d) return false;
             return d.getTime() >= todayStart.getTime();
         };
 
