@@ -195,22 +195,24 @@ async function handleUrlChange() {
     const keysParam = urlParams.get('keys');
     chordsVisible = urlParams.get('chords') !== 'false'; // Update global state
 
-    // Lógica para carregar o repertório a partir do ID (NOVO)
-    if (setParam && !songsParam) {
+    // Repertório na URL: com ou sem ?songs= (música atual ao abrir a partir do card)
+    if (setParam) {
         const set = setList.find(s => String(s.data.id) === String(setParam));
         if (set) {
-            // Monta a lista de músicas a partir dos dados do repertório
             songsList = set.data.songs.map(song => song.song_id.toString());
-            currentSongIndex = 0;
+            if (songsParam) {
+                const targetId = songsParam.split(',')[0];
+                const idx = songsList.findIndex(id => String(id) === String(targetId));
+                currentSongIndex = idx >= 0 ? idx : 0;
+            } else {
+                currentSongIndex = 0;
+            }
             updateAppVisibility('song');
         } else {
-            // Caso o repertório não seja encontrado, volta para a página inicial
             songsList = [];
             updateAppVisibility('landing');
         }
-    }
-    // Lógica original para carregar músicas individuais ou uma lista explícita
-    else if (songsParam) {
+    } else if (songsParam) {
         songsList = songsParam.split(',');
         const keysList = keysParam ? keysParam.split(',') : [];
         currentSongIndex = 0;
@@ -287,6 +289,9 @@ function addSongNavigation() {
     // Helper function to update URL with current song and key
     const updateUrlWithKey = (song) => {
         const url = new URL(window.location);
+        if (url.searchParams.get('set')) {
+            url.searchParams.set('songs', String(song.id));
+        }
         const currentKeys = url.searchParams.get('keys') ? url.searchParams.get('keys').split(',') : [];
         if (song.requested_key) {
             currentKeys[currentSongIndex] = song.requested_key;

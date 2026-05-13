@@ -106,7 +106,7 @@ async function loadAllSets() {
             const dB = isoB ? parseEventDateValue(isoB) : null;
             const tA = dA ? dA.getTime() : 0;
             const tB = dB ? dB.getTime() : 0;
-            return tB - tA;
+            return tA - tB;
         });
 
         const todayStart = new Date();
@@ -128,10 +128,6 @@ async function loadAllSets() {
             else pastSets.push(set);
         }
 
-        for (const set of upcomingSets) {
-            await displaySetCard(setsContainer, set.data, set.fileName);
-        }
-
         if (pastSets.length > 0) {
             const showMoreWrap = document.createElement('div');
             showMoreWrap.className = 'sets-show-more';
@@ -139,13 +135,18 @@ async function loadAllSets() {
             const showMoreBtn = document.createElement('button');
             showMoreBtn.type = 'button';
             showMoreBtn.className = 'show-more-sets-button';
-            showMoreBtn.textContent = 'Exibir mais';
+            showMoreBtn.textContent = 'Exibir Histórico';
 
             showMoreBtn.addEventListener('click', async () => {
                 showMoreBtn.disabled = true;
                 showMoreBtn.textContent = 'Carregando...';
+                const anchor = setsContainer.querySelector('.set-card');
                 for (const set of pastSets) {
-                    await displaySetCard(setsContainer, set.data, set.fileName);
+                    if (anchor) {
+                        await displaySetCard(setsContainer, set.data, set.fileName, anchor);
+                    } else {
+                        await displaySetCard(setsContainer, set.data, set.fileName);
+                    }
                 }
                 showMoreWrap.remove();
             });
@@ -153,17 +154,22 @@ async function loadAllSets() {
             showMoreWrap.appendChild(showMoreBtn);
             setsContainer.appendChild(showMoreWrap);
         }
+
+        for (const set of upcomingSets) {
+            await displaySetCard(setsContainer, set.data, set.fileName);
+        }
     } catch (error) {
         console.error('Error loading sets:', error);
         setsContainer.innerHTML = `<p>Não foi possível carregar as programações. ${error.message || ''}</p>`;
     }
 }
 
-// Function to open a song in the main view
-function openSong(songId) {
+/** Abre uma música mantendo o repertório na fila (navegação e cabeçalho do set). */
+function openSongInSet(setId, songId) {
     updateAppVisibility('song');
 
     const url = new URL(window.location);
+    url.searchParams.set('set', String(setId));
     url.searchParams.set('songs', String(songId));
     window.history.pushState({}, '', url);
 
@@ -193,7 +199,7 @@ function loadAllSongsInSet(setData) {
 }
 
 // Function to display a set
-async function displaySetCard(container, setData, fileName) {
+async function displaySetCard(container, setData, fileName, insertBefore = null) {
     const hasSongs = Array.isArray(setData.songs) && setData.songs.length > 0;
     const setCard = document.createElement('div');
     setCard.className = 'set-card';
@@ -286,7 +292,7 @@ async function displaySetCard(container, setData, fileName) {
 
             songLink.addEventListener('click', e => {
                 e.preventDefault();
-                openSong(song.song_id);
+                openSongInSet(setData.id, song.song_id);
             });
 
             songInfo.appendChild(songLink);
@@ -307,7 +313,11 @@ async function displaySetCard(container, setData, fileName) {
 
     setCard.dataset.fileName = fileName;
 
-    container.appendChild(setCard);
+    if (insertBefore) {
+        container.insertBefore(setCard, insertBefore);
+    } else {
+        container.appendChild(setCard);
+    }
 }
 
 // Function to listen for the back button in song view
