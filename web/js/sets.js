@@ -76,19 +76,18 @@ async function loadAllSets() {
     try {
         const cfg = getEigrejaPublicConfig();
         const body = await fetchProgramacoes(cfg);
-        const schedules = body && Array.isArray(body.schedules) ? body.schedules : [];
+        const apiSets = body && Array.isArray(body.sets) ? body.sets : [];
 
-        if (schedules.length === 0) {
-            setsContainer.innerHTML = '<p>Nenhuma programação pública encontrada.</p>';
+        if (apiSets.length === 0) {
+            setsContainer.innerHTML = '<p>Nenhum repertório público encontrado.</p>';
             return;
         }
 
         setsContainer.innerHTML = '';
 
-        for (const schedule of schedules) {
-            const setData = mapScheduleToSetData(schedule);
+        for (const apiSet of apiSets) {
+            const setData = mapApiSetToSetData(apiSet);
             if (!setData.id) continue;
-            if (!setDataHasSongs(setData)) continue;
             setList.push({
                 data: setData,
                 fileName: setData.id
@@ -96,8 +95,7 @@ async function loadAllSets() {
         }
 
         if (setList.length === 0) {
-            setsContainer.innerHTML =
-                '<p>Nenhum repertório com músicas encontrado (programações vazias foram ocultadas).</p>';
+            setsContainer.innerHTML = '<p>Nenhum repertório encontrado.</p>';
             return;
         }
 
@@ -196,8 +194,12 @@ function loadAllSongsInSet(setData) {
 
 // Function to display a set
 async function displaySetCard(container, setData, fileName) {
+    const hasSongs = Array.isArray(setData.songs) && setData.songs.length > 0;
     const setCard = document.createElement('div');
     setCard.className = 'set-card';
+    if (!hasSongs) {
+        setCard.classList.add('set-card--empty');
+    }
 
     const setHeader = document.createElement('div');
     setHeader.className = 'set-header';
@@ -216,6 +218,12 @@ async function displaySetCard(container, setData, fileName) {
     const dateElement = document.createElement('div');
     dateElement.className = 'set-date';
     dateElement.textContent = setData.date || 'No date';
+    if (!hasSongs) {
+        const hint = document.createElement('span');
+        hint.className = 'set-empty-hint-inline';
+        hint.textContent = ' · sem músicas';
+        dateElement.appendChild(hint);
+    }
 
     setHeader.appendChild(titleElement);
     setHeader.appendChild(dateElement);
@@ -235,7 +243,7 @@ async function displaySetCard(container, setData, fileName) {
         setCard.appendChild(infoElement);
     }
 
-    if (setData.songs && setData.songs.length > 0) {
+    if (hasSongs) {
         const loadButtonContainer = document.createElement('div');
         loadButtonContainer.className = 'set-actions';
 
@@ -252,7 +260,7 @@ async function displaySetCard(container, setData, fileName) {
         setCard.appendChild(loadButtonContainer);
     }
 
-    if (setData.songs && setData.songs.length > 0) {
+    if (hasSongs) {
         const songsContainer = document.createElement('div');
         songsContainer.className = 'set-songs';
 
@@ -295,10 +303,6 @@ async function displaySetCard(container, setData, fileName) {
         });
 
         setCard.appendChild(songsContainer);
-    } else {
-        const noSongs = document.createElement('p');
-        noSongs.textContent = 'No songs in this set.';
-        setCard.appendChild(noSongs);
     }
 
     setCard.dataset.fileName = fileName;

@@ -121,26 +121,13 @@ function mapEigrejaSongToEditorSong(apiSong) {
     return song;
 }
 
-function parseScheduleSongs(schedule) {
-    const raw = schedule.songs;
-    if (Array.isArray(raw) && raw.length > 0) {
-        return raw.map(slot => ({
-            song_id: String(slot.songId != null ? slot.songId : slot.song_id),
-            key: slot.key != null ? String(slot.key) : '',
-            notes: slot.notes != null ? String(slot.notes) : '',
-            songTitulo: slot.songTitulo != null ? String(slot.songTitulo) : ''
-        }));
-    }
-    const items = schedule.items;
-    if (!Array.isArray(items)) return [];
-    return items
-        .filter(it => it && (it.type === 'song' || it.type === 'musica'))
-        .map(it => ({
-            song_id: String(it.songId != null ? it.songId : it.song_id),
-            key: it.key != null ? String(it.key) : '',
-            notes: it.notes != null ? String(it.notes) : '',
-            songTitulo: it.songTitulo != null ? String(it.songTitulo) : ''
-        }));
+/** Converte data exibida DD/MM/AAAA (retorno em `sets`) para ISO AAAA-MM-DD. */
+function parseBrDisplayDateToIso(brDate) {
+    if (!brDate) return '';
+    const s = String(brDate).trim();
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return '';
+    return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
 function parseEventDateValue(isoOrStr) {
@@ -170,52 +157,50 @@ function formatEventDateForUi(isoOrStr) {
     return `${day}/${month}/${year}`;
 }
 
-function mapScheduleToSetData(schedule) {
-    const eventDateIso = schedule.eventDate != null ? String(schedule.eventDate) : '';
-    const songs = parseScheduleSongs(schedule);
-    const title =
-        schedule.name != null
-            ? String(schedule.name)
-            : schedule.title != null
-              ? String(schedule.title)
-              : '';
+/**
+ * Mapeia um item de `GET …/programacoes` → `sets[]` para o formato usado no editor / cards.
+ * O payload público já traz título, data (DD/MM/AAAA), equipe e faixas com `song_id`.
+ */
+function mapApiSetToSetData(apiSet) {
+    if (!apiSet || typeof apiSet !== 'object') return null;
+    const rawEvent = apiSet.eventDate != null ? String(apiSet.eventDate).trim() : '';
+    const eventDateIso = rawEvent || parseBrDisplayDateToIso(apiSet.date);
+    const dateUi =
+        apiSet.date != null && String(apiSet.date).trim()
+            ? String(apiSet.date).trim()
+            : formatEventDateForUi(eventDateIso);
 
-    // Campos opcionais (variam conforme versão/shape do payload)
-    var equipeObj = schedule.equipe;
-    var teamObj = schedule.team;
-    var equipeNome =
-        schedule.equipeNome != null
-            ? String(schedule.equipeNome)
-            : equipeObj && equipeObj.nome != null
-              ? String(equipeObj.nome)
-              : schedule.teamName != null
-                ? String(schedule.teamName)
-                : teamObj && teamObj.name != null
-                  ? String(teamObj.name)
-                  : '';
+    const songsRaw = Array.isArray(apiSet.songs) ? apiSet.songs : [];
+    const songs = songsRaw
+        .map((slot, idx) => {
+            const sid =
+                slot.song_id != null
+                    ? slot.song_id
+                    : slot.songId != null
+                      ? slot.songId
+                      : '';
+            const song_id = sid != null && sid !== '' ? String(sid).trim() : '';
+            return {
+                song_id,
+                no: slot.no != null ? String(slot.no) : String(idx + 1),
+                key: slot.key != null ? String(slot.key) : '',
+                notes: slot.notes != null ? String(slot.notes) : '',
+                songTitulo: slot.songTitulo != null ? String(slot.songTitulo) : ''
+            };
+        })
+        .filter(s => s.song_id);
 
-    var dirObj = schedule.dirigente;
-    var dirigenteNome =
-        schedule.dirigenteNome != null
-            ? String(schedule.dirigenteNome)
-            : dirObj && dirObj.nome != null
-              ? String(dirObj.nome)
-              : schedule.leaderName != null
-                ? String(schedule.leaderName)
-                : schedule.leader != null
-                  ? String(schedule.leader)
-                  : '';
     return {
-        id: String(schedule.id != null ? schedule.id : ''),
-        title,
-        date: formatEventDateForUi(eventDateIso),
+        id: String(apiSet.id != null ? apiSet.id : ''),
+        title: apiSet.title != null ? String(apiSet.title) : '',
+        date: dateUi,
         eventDateIso,
         songs,
-        notes: schedule.notes != null ? String(schedule.notes) : '',
-        leader: schedule.leader != null ? String(schedule.leader) : '',
-        equipeNome,
-        dirigenteNome,
-        is_draft: !!schedule.isDraft || !!schedule.is_draft
+        notes: apiSet.notes != null ? String(apiSet.notes) : '',
+        leader: apiSet.leader != null ? String(apiSet.leader) : '',
+        equipeNome: apiSet.equipeNome != null ? String(apiSet.equipeNome) : '',
+        dirigenteNome: apiSet.dirigenteNome != null ? String(apiSet.dirigenteNome) : '',
+        is_draft: !!apiSet.is_draft || !!apiSet.isDraft
     };
 }
 

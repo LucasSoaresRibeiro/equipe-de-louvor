@@ -33,8 +33,8 @@ async function loadRelatorioDatasetsFromEigreja() {
     }
 
     const allSetsData = [];
-    for (const sch of progBody.schedules || []) {
-        const d = mapScheduleToSetData(sch);
+    for (const apiSet of progBody.sets || []) {
+        const d = mapApiSetToSetData(apiSet);
         if (!d.id || !setDataHasSongs(d)) continue;
         allSetsData.push({
             id: d.id,
@@ -46,12 +46,12 @@ async function loadRelatorioDatasetsFromEigreja() {
             is_draft: !!d.is_draft,
             songs: (d.songs || []).map((slot, idx) => ({
                 song_id: slot.song_id,
-                no: String(idx + 1),
+                no: String(slot.no != null ? slot.no : idx + 1),
                 key: slot.key || '',
                 use_b: false,
                 notes: slot.notes || ''
             })),
-            it_rained: !!(sch.itRained || sch.it_rained)
+            it_rained: !!(apiSet.itRained || apiSet.it_rained)
         });
     }
 
