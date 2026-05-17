@@ -6,8 +6,9 @@ const EIGREJA_DEFAULTS = {
     /** Slug da igreja (ex.: o mesmo de https://eigreja.com/{slug}/...) */
     churchSlug: 'ibm',
     apiBase: 'https://eigreja.com/api/public/v1',
+    // apiBase: 'http://localhost:9003/api/public/v1',
     /** Chave opcional (mesmo valor que EIGREJA_PUBLIC_SYNC_API_KEY no servidor) */
-    syncApiKey: 'equipe-de-louvor-com-20260415',
+    syncApiKey: 'eig_B_4iJz1KHBYy276UatapMOADy1kj4zyK',
     /** Origem usada em links de partilha (WhatsApp, etc.); vazio = derivar da página atual */
     publicAppUrl: '',
     musicasLimit: 500,
