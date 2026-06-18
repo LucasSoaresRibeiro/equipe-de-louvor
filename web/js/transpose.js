@@ -22,10 +22,20 @@ function semitoneToSharpName(semi) {
     return names[((semi % 12) + 12) % 12];
 }
 
+function semitoneToFlatName(semi) {
+    var names = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+    return names[((semi % 12) + 12) % 12];
+}
+
+function semitoneToNoteName(semi, useFlats) {
+    return useFlats ? semitoneToFlatName(semi) : semitoneToSharpName(semi);
+}
+
 /**
- * Transpõe um nome de nota (ex.: "Bb", "F#") por `steps` semitons (usa sustenidos na saída).
+ * Transpõe um nome de nota (ex.: "Bb", "F#") por `steps` semitons.
+ * Com `useFlats`, a saída usa bemóis; caso contrário, sustenidos.
  */
-function transposeNoteToken(note, steps) {
+function transposeNoteToken(note, steps, useFlats) {
     if (!note || steps === 0) {
         return note;
     }
@@ -37,13 +47,13 @@ function transposeNoteToken(note, steps) {
     var acc = m[2] || '';
     var semi = letterAccToSemitone(letter, acc);
     semi = (semi + steps + 12000) % 12;
-    return semitoneToSharpName(semi);
+    return semitoneToNoteName(semi, !!useFlats);
 }
 
 /**
  * Tom da música (ex.: "C", "Am", "Bb", "F#m") a partir do tom original e semitons relativos.
  */
-function transposeKeyString(keyStr, steps) {
+function transposeKeyString(keyStr, steps, useFlats) {
     if (keyStr == null || keyStr === '' || !steps) {
         return keyStr;
     }
@@ -52,14 +62,14 @@ function transposeKeyString(keyStr, steps) {
     if (!m) {
         return keyStr;
     }
-    var newRoot = transposeNoteToken(m[1] + (m[2] || ''), steps);
+    var newRoot = transposeNoteToken(m[1] + (m[2] || ''), steps, useFlats);
     return newRoot + (m[3] || '');
 }
 
 /**
  * Transpõe um acorde completo (sufixo + baixo opcional), preservando sufixos como maj7, sus4, m.
  */
-function transposeChordSymbol(chord, steps) {
+function transposeChordSymbol(chord, steps, useFlats) {
     if (!chord || steps === 0) {
         return chord;
     }
@@ -87,9 +97,9 @@ function transposeChordSymbol(chord, steps) {
             return chord;
         }
         var newLeft =
-            transposeNoteToken(lm[1] + (lm[2] || ''), steps) + (lm[3] || '');
+            transposeNoteToken(lm[1] + (lm[2] || ''), steps, useFlats) + (lm[3] || '');
         var bm = bass.match(/^([A-Ga-g])([#b\u266F\u266D]?)(.*)$/);
-        var newBass = bm ? transposeNoteToken(bm[1] + (bm[2] || ''), steps) + (bm[3] || '') : bass;
+        var newBass = bm ? transposeNoteToken(bm[1] + (bm[2] || ''), steps, useFlats) + (bm[3] || '') : bass;
         return newLeft + '/' + newBass + numericTail + trailingSpaces;
     }
 
@@ -97,7 +107,7 @@ function transposeChordSymbol(chord, steps) {
     if (!rm) {
         return chord;
     }
-    return transposeNoteToken(rm[1] + (rm[2] || ''), steps) + (rm[3] || '') + numericTail + trailingSpaces;
+    return transposeNoteToken(rm[1] + (rm[2] || ''), steps, useFlats) + (rm[3] || '') + numericTail + trailingSpaces;
 }
 
 /**
@@ -145,17 +155,19 @@ function transpose(direction) {
     }
     currentSongData.chord_chart = transposeChordChart(
         chordChart,
-        currentSongData.key_accumulation
+        currentSongData.key_accumulation,
+        currentSongData.key_accumulation < 0
     );
     currentSongData.key = transposeKeyString(
         currentSongData.key_original,
-        currentSongData.key_accumulation
+        currentSongData.key_accumulation,
+        currentSongData.key_accumulation < 0
     );
 
     createSongContent(currentSongData);
 }
 
-function transposeChordChart(chordChart, steps) {
+function transposeChordChart(chordChart, steps, useFlats) {
     var lines = chordChart.split('\n');
 
     var transposedLines = lines.map(function (line) {
@@ -182,7 +194,7 @@ function transposeChordChart(chordChart, steps) {
                 return chord + originalSpacing;
             }
 
-            var transposedChord = transposeChordSymbol(chord, steps);
+            var transposedChord = transposeChordSymbol(chord, steps, useFlats);
             var lengthDiff = chord.length - transposedChord.length;
             var adjustedSpacing;
             if (lengthDiff > 0) {

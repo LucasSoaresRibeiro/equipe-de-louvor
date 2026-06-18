@@ -366,11 +366,13 @@ function updateKeyAccumulationForSet(songsList) {
                 songData['key_accumulation'] = parseInt(songSetConfig['key'].match(/\d+/)[0], 10);
                 songData['chord_chart'] = transposeChordChart(
                     songData['chord_chart_original'],
-                    songData['key_accumulation']
+                    songData['key_accumulation'],
+                    songData['key_accumulation'] < 0
                 );
                 songData['key'] = transposeKeyString(
                     songData['key_original'],
-                    songData['key_accumulation']
+                    songData['key_accumulation'],
+                    songData['key_accumulation'] < 0
                 );
             } else {
                 songData['key_accumulation'] = 0;
